@@ -4,14 +4,6 @@ export const fallbackCocktailDrink = {
   note: '라임 산미와 바질 향이 먼저 올라오는 산뜻한 한 잔.',
   meta: '5분 · Shake · 중간 도수',
 }
-
-export const featuredWineDrink = {
-  name: 'Pinot Noir',
-  type: 'Wine',
-  note: '체리, 흙내음, 낮은 탄닌. 가벼운 저녁 식사와 잘 맞습니다.',
-  meta: 'Red · Light body · Pairing',
-}
-
 export const categories = [
   { title: 'Cocktail', count: 'Recipe 124', accent: 'teal' },
   { title: 'Wine', count: 'Bottle 86', accent: 'wine' },
@@ -35,3 +27,6 @@ export const cocktailAlcoholFilters = ['알코올', '논알코올', '알코올 �
 export const cocktailCategoryFilters = ['칵테일', '샷', '펀치', '커피 / 차', '셰이크', '기타']
 export const cocktailColorFilters = ['투명', '붉은색', '노란색', '초록색', '갈색', '크림색', '기타']
 export const wineTypeFilters = ['레드', '화이트', '스파클링', '로제', '디저트', '포트']
+export const wineRatingFilters = ['5.0 이상', '4.5 이상', '4.0 이상', '3.5 이상']
+export const wineBodyFilters = ['바디감 1/5', '바디감 2/5', '바디감 3/5', '바디감 4/5', '바디감 5/5']
+export const wineAcidityFilters = ['산미 1/5', '산미 2/5', '산미 3/5', '산미 4/5', '산미 5/5']

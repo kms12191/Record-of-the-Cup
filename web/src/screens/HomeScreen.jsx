@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { SectionHeader } from '../components/common'
 import { HeartIcon, NoteIcon } from '../components/icons'
-import { categories, fallbackCocktailDrink, featuredWineDrink, savedNotes } from '../constants/appData'
+import { categories, fallbackCocktailDrink, savedNotes } from '../constants/appData'
 import { fetchFeaturedCocktails } from '../services/cocktailService'
+import { fetchFeaturedWines } from '../services/wineService'
 
 export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, savedDrinkIds }) {
   const [featuredCocktails, setFeaturedCocktails] = useState([fallbackCocktailDrink])
+  const [featuredWines, setFeaturedWines] = useState([])
 
   useEffect(() => {
     let isMounted = true
@@ -22,12 +24,24 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, s
         }
       })
 
+    fetchFeaturedWines(1)
+      .then((wines) => {
+        if (isMounted) {
+          setFeaturedWines(wines)
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setFeaturedWines([])
+        }
+      })
+
     return () => {
       isMounted = false
     }
   }, [])
 
-  const featuredDrinks = [...featuredCocktails, featuredWineDrink]
+  const featuredDrinks = [...featuredCocktails, ...featuredWines]
   return (
     <>
       <section className="top-panel">
@@ -44,13 +58,13 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, s
       </section>
 
       <section className="content-panel">
-        <SectionHeader title="추천 리스트" action="전체보기" onAction={() => onCategorySelect('search')} />
+        <SectionHeader title="추천 리스트" action="전체보기" onAction={() => onCategorySelect('cocktail')} />
         <div className="featured-list">
           {featuredDrinks.map((drink) => (
             <article
               className={`drink-card ${drink.type.toLowerCase()}`}
               key={drink.id || drink.name}
-              onClick={() => drink.type === 'Cocktail' && onOpenDrinkDetail(drink)}
+              onClick={() => onOpenDrinkDetail(drink)}
             >
               <div className="drink-art" aria-hidden="true">
                 {drink.imageUrl ? <img alt="" src={drink.imageUrl} /> : null}
@@ -80,14 +94,15 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, s
         <SectionHeader title="탐색 카테고리" action="필터" />
         <div className="category-strip">
           {categories.map((category) => {
-            const isActiveCategory = category.title === 'Cocktail'
+            const drinkType = category.title.toLowerCase()
+            const isActiveCategory = ['cocktail', 'wine'].includes(drinkType)
 
             return (
               <button
                 aria-disabled={!isActiveCategory}
                 className={`category-tile ${category.accent} ${isActiveCategory ? 'active' : 'disabled'}`}
                 key={category.title}
-                onClick={isActiveCategory ? () => onCategorySelect('search') : undefined}
+                onClick={isActiveCategory ? () => onCategorySelect(drinkType) : undefined}
                 type="button"
               >
                 <strong>{category.title}</strong>

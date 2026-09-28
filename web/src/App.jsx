@@ -23,6 +23,7 @@ function App() {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [saveNotice, setSaveNotice] = useState('')
+  const [searchDrinkType, setSearchDrinkType] = useState('cocktail')
   const [savedDrinkIds, setSavedDrinkIds] = useState([])
   const [savedRefreshKey, setSavedRefreshKey] = useState(0)
 
@@ -152,6 +153,11 @@ function App() {
     return () => mediaQuery.removeEventListener('change', applyTheme)
   }, [themeMode])
 
+  function openSearchTab(nextDrinkType = 'cocktail') {
+    setSearchDrinkType(nextDrinkType)
+    setActiveTab('search')
+  }
+
   async function handleSaveDrink(drink) {
     if (!session?.user) {
       setSaveNotice('로그인 후 관심 목록에 저장할 수 있습니다.')
@@ -184,13 +190,13 @@ function App() {
   return (
     <main className={`app-shell ${activeTab === 'settings' ? 'settings-mode' : ''} ${isDetailRoute ? 'detail-mode' : ''}`} aria-label="Record of the Cup app">
       {route.name === 'cocktailDetail' ? (
-        <CocktailDetailPage key={route.cocktailId} cocktailId={route.cocktailId} onBack={goBackFromDetail} />
+        <CocktailDetailPage key={route.cocktailId} cocktailId={route.cocktailId} onBack={goBackFromDetail} session={session} />
       ) : route.name === 'wineDetail' ? (
-        <WineDetailPage key={route.wineId} wineId={route.wineId} onBack={goBackFromDetail} />
+        <WineDetailPage key={route.wineId} wineId={route.wineId} onBack={goBackFromDetail} session={session} />
       ) : (
         <>
-          {activeTab === 'home' ? <HomeScreen onCategorySelect={setActiveTab} onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} /> : null}
-          {activeTab === 'search' ? <SearchScreen onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} /> : null}
+          {activeTab === 'home' ? <HomeScreen onCategorySelect={openSearchTab} onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} /> : null}
+          {activeTab === 'search' ? <SearchScreen initialDrinkType={searchDrinkType} key={searchDrinkType} onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} /> : null}
           {activeTab === 'saved' ? <SavedScreen onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} refreshKey={savedRefreshKey} session={session} /> : null}
           {activeTab === 'notes' ? <NotesScreen /> : null}
           {activeTab === 'settings' ? <SettingsScreen onThemeModeChange={setThemeMode} profile={profile} session={session} themeMode={themeMode} /> : null}

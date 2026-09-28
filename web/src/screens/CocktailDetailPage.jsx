@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { DrinkNotePanel } from '../components/DrinkNotePanel'
 import { BackIcon } from '../components/icons'
 import { fetchCocktailById } from '../services/cocktailService'
 
-export function CocktailDetailPage({ cocktailId, onBack }) {
+export function CocktailDetailPage({ cocktailId, onBack, session }) {
   const [drink, setDrink] = useState(null)
   const [status, setStatus] = useState('loading')
 
@@ -98,6 +99,8 @@ export function CocktailDetailPage({ cocktailId, onBack }) {
             <h3>제조법</h3>
             <p>{detail.instructions}</p>
           </section>
+
+          <DrinkNotePanel drink={drink} session={session} />
         </section>
       ) : null}
     </section>

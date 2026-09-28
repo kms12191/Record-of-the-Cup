@@ -1,4 +1,4 @@
-import { cocktailAlcoholFilters, cocktailCategoryFilters, cocktailColorFilters, wineTypeFilters } from '../constants/appData'
+import { cocktailAlcoholFilters, cocktailCategoryFilters, cocktailColorFilters, wineAcidityFilters, wineBodyFilters, wineRatingFilters, wineTypeFilters } from '../constants/appData'
 
 export function FilterPanel({ activeFilterCount, drinkType, filters, onFilterChange, onReset }) {
   return (
@@ -8,7 +8,7 @@ export function FilterPanel({ activeFilterCount, drinkType, filters, onFilterCha
           <span className="eyebrow dark">Filter</span>
           <h2>검색 메뉴</h2>
         </div>
-        <button disabled={activeFilterCount === 0 && drinkType === 'cocktail'} onClick={onReset} type="button">
+        <button disabled={activeFilterCount === 0} onClick={onReset} type="button">
           초기화
         </button>
       </div>
@@ -47,6 +47,27 @@ export function FilterPanel({ activeFilterCount, drinkType, filters, onFilterCha
             options={wineTypeFilters}
             value={filters.wineType}
             note="WineAPI 보강 완료 데이터 우선 표시"
+          />
+          <FilterChipGroup
+            label="평점"
+            name="rating"
+            onChange={onFilterChange}
+            options={wineRatingFilters}
+            value={filters.rating}
+          />
+          <FilterChipGroup
+            label="바디감"
+            name="body"
+            onChange={onFilterChange}
+            options={wineBodyFilters}
+            value={filters.body}
+          />
+          <FilterChipGroup
+            label="산미"
+            name="acidity"
+            onChange={onFilterChange}
+            options={wineAcidityFilters}
+            value={filters.acidity}
           />
         </div>
       )}

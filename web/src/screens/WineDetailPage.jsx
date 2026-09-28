@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
+import { DrinkNotePanel } from '../components/DrinkNotePanel'
 import { BackIcon } from '../components/icons'
-import { fetchWineById } from '../services/wineService'
+import { fetchWineById, translateWineGrape, translateWinePairing } from '../services/wineService'
 
-export function WineDetailPage({ onBack, wineId }) {
+export function WineDetailPage({ onBack, session, wineId }) {
   const [wine, setWine] = useState(null)
   const [status, setStatus] = useState('loading')
 
@@ -80,8 +81,8 @@ export function WineDetailPage({ onBack, wineId }) {
 
           <div className="detail-meta-grid">
             <span><strong>지역</strong>{[detail.country, detail.region].filter(Boolean).join(' · ') || '지역 정보 없음'}</span>
-            <span><strong>바디감</strong>{detail.body || '정보 없음'}</span>
-            <span><strong>산미</strong>{detail.acidity || '정보 없음'}</span>
+            <span><strong>바디감</strong>{formatIntensity(detail.body)}</span>
+            <span><strong>산미</strong>{formatIntensity(detail.acidity)}</span>
           </div>
 
           <section className="detail-section">
@@ -94,8 +95,8 @@ export function WineDetailPage({ onBack, wineId }) {
             <div className="ingredient-list">
               {grapes.length > 0 ? grapes.map((grape, index) => (
                 <div className="ingredient-row" key={`${String(grape)}-${index}`}>
-                  <span>{formatDetailItem(grape)}</span>
-                  <strong>Grape</strong>
+                  <span>{translateWineGrape(grape)}</span>
+                  <strong>품종</strong>
                 </div>
               )) : <p>포도 품종 정보가 아직 준비되지 않았습니다.</p>}
             </div>
@@ -106,59 +107,28 @@ export function WineDetailPage({ onBack, wineId }) {
             <div className="ingredient-list">
               {pairings.length > 0 ? pairings.map((pairing, index) => (
                 <div className="ingredient-row" key={`${String(pairing)}-${index}`}>
-                  <span>{formatPairingItem(pairing)}</span>
-                  <strong>Pairing</strong>
+                  <span>{translateWinePairing(pairing)}</span>
+                  <strong>페어링</strong>
                 </div>
               )) : <p>페어링 정보가 아직 준비되지 않았습니다.</p>}
             </div>
           </section>
+
+          <DrinkNotePanel drink={wine} session={session} />
         </section>
       ) : null}
     </section>
   )
 }
 
-const pairingKoMap = {
-  beef: '소고기',
-  pasta: '파스타',
-  lamb: '양고기',
-  'game meat': '진한 육류',
-  'maturated cheese': '숙성 치즈',
-  'hard cheese': '하드 치즈',
-  poultry: '가금류',
-  pork: '돼지고기',
-  seafood: '해산물',
-  fish: '생선',
-  shellfish: '조개류',
-  dessert: '디저트',
-}
-
-function formatDetailItem(item) {
-  if (typeof item === 'string') {
-    return item
+function formatIntensity(profile) {
+  if (!profile) {
+    return '정보 없음'
   }
 
-  if (item?.name) {
-    return item.name
+  if (!profile.score) {
+    return profile.label || '정보 없음'
   }
 
-  if (item?.label) {
-    return item.label
-  }
-
-  return '정보 없음'
-}
-
-function formatPairingItem(item) {
-  if (typeof item === 'string') {
-    return pairingKoMap[item.toLowerCase()] || item
-  }
-
-  if (item?.food) {
-    const food = String(item.food)
-    const translatedFood = pairingKoMap[food.toLowerCase()] || food
-    return item.notes ? `${translatedFood} · ${item.notes}` : translatedFood
-  }
-
-  return formatDetailItem(item)
+  return `${profile.label} · ${profile.score}/5`
 }

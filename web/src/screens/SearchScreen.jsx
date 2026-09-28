@@ -6,19 +6,19 @@ import { cocktailPageSize } from '../constants/appData'
 import { searchCocktails } from '../services/cocktailService'
 import { searchWines } from '../services/wineService'
 
-export function SearchScreen({ onOpenDrinkDetail, onSaveDrink, savedDrinkIds }) {
+export function SearchScreen({ initialDrinkType = 'cocktail', onOpenDrinkDetail, onSaveDrink, savedDrinkIds }) {
   const [query, setQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [results, setResults] = useState([])
   const [status, setStatus] = useState('loading')
   const [totalCount, setTotalCount] = useState(0)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
-  const [drinkType, setDrinkType] = useState('cocktail')
-  const [filters, setFilters] = useState({ alcoholic: '', category: '', color: '', wineType: '' })
+  const [drinkType, setDrinkType] = useState(initialDrinkType)
+  const [filters, setFilters] = useState(getInitialFilters())
   const totalPages = Math.ceil(totalCount / cocktailPageSize)
   const activeFilterCount = drinkType === 'cocktail'
     ? [filters.alcoholic, filters.category, filters.color].filter(Boolean).length
-    : [filters.wineType].filter(Boolean).length
+    : [filters.wineType, filters.rating, filters.body, filters.acidity].filter(Boolean).length
 
   useEffect(() => {
     let isMounted = true
@@ -59,8 +59,7 @@ export function SearchScreen({ onOpenDrinkDetail, onSaveDrink, savedDrinkIds }) 
   }
 
   function resetFilters() {
-    setFilters({ alcoholic: '', category: '', color: '', wineType: '' })
-    setDrinkType('cocktail')
+    setFilters(getInitialFilters())
     setCurrentPage(1)
   }
 
@@ -172,4 +171,8 @@ export function SearchScreen({ onOpenDrinkDetail, onSaveDrink, savedDrinkIds }) 
       ) : null}
     </section>
   )
+}
+
+function getInitialFilters() {
+  return { alcoholic: '', category: '', color: '', wineType: '', rating: '', body: '', acidity: '' }
 }
