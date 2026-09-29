@@ -195,10 +195,10 @@ function App() {
         <WineDetailPage key={route.wineId} wineId={route.wineId} onBack={goBackFromDetail} session={session} />
       ) : (
         <>
-          {activeTab === 'home' ? <HomeScreen onCategorySelect={openSearchTab} onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} /> : null}
+          {activeTab === 'home' ? <HomeScreen onCategorySelect={openSearchTab} onOpenDrinkDetail={navigateToDrinkDetail} onOpenNotes={() => setActiveTab('notes')} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} session={session} /> : null}
           {activeTab === 'search' ? <SearchScreen initialDrinkType={searchDrinkType} key={searchDrinkType} onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} /> : null}
           {activeTab === 'saved' ? <SavedScreen onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} refreshKey={savedRefreshKey} session={session} /> : null}
-          {activeTab === 'notes' ? <NotesScreen /> : null}
+          {activeTab === 'notes' ? <NotesScreen onOpenDrinkDetail={navigateToDrinkDetail} session={session} /> : null}
           {activeTab === 'settings' ? <SettingsScreen onThemeModeChange={setThemeMode} profile={profile} session={session} themeMode={themeMode} /> : null}
 
           <BottomTabs activeTab={activeTab} onTabChange={setActiveTab} />

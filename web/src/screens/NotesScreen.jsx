@@ -1,65 +1,46 @@
-import { useState } from 'react'
-import { BackIcon, PlusIcon } from '../components/icons'
-import { noteDraftStorageKey } from '../constants/appData'
+import { useEffect, useState } from 'react'
+import { NoteIcon } from '../components/icons'
+import { fetchDrinkNotes } from '../services/noteService'
 
-export function NotesScreen() {
-  const [isWriting, setIsWriting] = useState(false)
-  const [draftTitle, setDraftTitle] = useState(() => getStoredNoteDraft().title)
-  const [draftBody, setDraftBody] = useState(() => getStoredNoteDraft().body)
-  const [draftMessage, setDraftMessage] = useState('')
+export function NotesScreen({ onOpenDrinkDetail, session }) {
+  const [notes, setNotes] = useState([])
+  const [status, setStatus] = useState('loading')
+  const resolvedStatus = session?.user ? status : 'signedOut'
 
-  function saveDraft() {
-    window.localStorage.setItem(noteDraftStorageKey, JSON.stringify({
-      body: draftBody,
-      savedAt: new Date().toISOString(),
-      title: draftTitle,
-    }))
-    setDraftMessage('임시저장했습니다.')
-  }
+  useEffect(() => {
+    if (!session?.user) {
+      return undefined
+    }
 
-  if (isWriting) {
-    return (
-      <section className="notes-screen">
-        <header className="detail-page-header notes-write-header">
-          <button className="detail-back-button" type="button" aria-label="노트 목록으로 돌아가기" onClick={() => setIsWriting(false)}>
-            <BackIcon />
-          </button>
-          <div>
-            <span className="eyebrow dark">New note</span>
-            <h1>노트 추가</h1>
-          </div>
-        </header>
+    let isMounted = true
 
-        <section className="note-editor">
-          <label className="note-field">
-            <span>제목</span>
-            <input
-              onChange={(event) => setDraftTitle(event.target.value)}
-              placeholder="오늘 마신 한 잔"
-              value={draftTitle}
-            />
-          </label>
-          <label className="note-field">
-            <span>내용</span>
-            <textarea
-              onChange={(event) => setDraftBody(event.target.value)}
-              placeholder="향, 맛, 분위기, 다음에 바꿔볼 점을 적어보세요."
-              rows="10"
-              value={draftBody}
-            />
-          </label>
-          <div className="note-editor-actions">
-            <button className="secondary-action" onClick={saveDraft} type="button">
-              임시저장
-            </button>
-            <button className="primary-action" disabled type="button">
-              저장 준비 중
-            </button>
-          </div>
-          {draftMessage ? <p className="note-draft-message">{draftMessage}</p> : null}
-        </section>
-      </section>
-    )
+    fetchDrinkNotes(session.user.id)
+      .then((nextNotes) => {
+        if (!isMounted) {
+          return
+        }
+
+        setNotes(nextNotes)
+        setStatus(nextNotes.length > 0 ? 'ready' : 'empty')
+      })
+      .catch(() => {
+        if (isMounted) {
+          setNotes([])
+          setStatus('error')
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [session])
+
+  function openNoteDrink(note) {
+    if (!note.drink.id) {
+      return
+    }
+
+    onOpenDrinkDetail(note.drink)
   }
 
   return (
@@ -68,36 +49,65 @@ export function NotesScreen() {
         <div>
           <span className="eyebrow dark">Notes</span>
           <h1>노트</h1>
-          <p>개인 시음 기록과 메모를 정리할 화면입니다.</p>
+          <p>상세 페이지에서 남긴 개인 노트를 모아봅니다.</p>
         </div>
-        <button className="add-note-button" onClick={() => setIsWriting(true)} type="button" aria-label="노트 추가">
-          <PlusIcon />
-        </button>
       </header>
 
-      <div className="state-panel">
-        <strong>아직 작성한 노트가 없어요.</strong>
-        <p>+ 버튼으로 새 노트를 추가할 수 있습니다.</p>
-      </div>
+      {resolvedStatus === 'signedOut' ? (
+        <div className="state-panel">
+          <strong>로그인이 필요합니다.</strong>
+          <p>로그인 후 칵테일과 와인 상세 페이지에서 남긴 노트를 확인할 수 있습니다.</p>
+        </div>
+      ) : null}
+
+      {resolvedStatus === 'loading' ? (
+        <div className="state-panel">
+          <strong>노트를 불러오는 중입니다.</strong>
+          <p>저장된 개인 노트를 확인하고 있어요.</p>
+        </div>
+      ) : null}
+
+      {resolvedStatus === 'error' ? (
+        <div className="state-panel">
+          <strong>노트를 불러오지 못했어요.</strong>
+          <p>Supabase 연결 상태를 확인한 뒤 다시 시도해주세요.</p>
+        </div>
+      ) : null}
+
+      {resolvedStatus === 'empty' ? (
+        <div className="state-panel">
+          <strong>아직 저장한 노트가 없어요.</strong>
+          <p>칵테일이나 와인 상세 페이지에서 내 노트를 남겨보세요.</p>
+        </div>
+      ) : null}
+
+      {resolvedStatus === 'ready' ? (
+        <div className="notes-list">
+          {notes.map((note) => (
+            <article className="note-card" key={note.id} onClick={() => openNoteDrink(note)}>
+              <div className="note-card-icon" aria-hidden="true">
+                <NoteIcon />
+              </div>
+              <div>
+                <span>{note.drinkType} · {formatNoteDate(note.updatedAt)}</span>
+                <h2>{note.drinkName}</h2>
+                <p>{note.note}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
     </section>
   )
 }
 
-function getStoredNoteDraft() {
-  try {
-    const storedDraft = window.localStorage.getItem(noteDraftStorageKey)
-
-    if (!storedDraft) {
-      return { body: '', title: '' }
-    }
-
-    const parsedDraft = JSON.parse(storedDraft)
-
-    return {
-      body: parsedDraft.body || '',
-      title: parsedDraft.title || '',
-    }
-  } catch {
-    return { body: '', title: '' }
+function formatNoteDate(value) {
+  if (!value) {
+    return '날짜 없음'
   }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(value))
 }

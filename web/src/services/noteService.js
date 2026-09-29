@@ -1,5 +1,35 @@
 import { supabase } from '../lib/supabaseClient'
 
+
+export async function fetchRecentDrinkNotes(userId, limit = 1) {
+  const { data, error } = await supabase
+    .from('drink_notes')
+    .select('id, drink_type, source, external_id, drink_name, note, updated_at, created_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    throw error
+  }
+
+  return (data || []).map(toDrinkNoteCard)
+}
+
+export async function fetchDrinkNotes(userId) {
+  const { data, error } = await supabase
+    .from('drink_notes')
+    .select('id, drink_type, source, external_id, drink_name, note, updated_at, created_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  return (data || []).map(toDrinkNoteCard)
+}
+
 export async function fetchDrinkNote(userId, drink) {
   const identity = getDrinkNoteIdentity(userId, drink)
 
@@ -87,4 +117,33 @@ function getDrinkNoteIdentity(userId, drink) {
     source: drink.type === 'Cocktail' ? 'cocktaildb' : drink.detail?.source || 'manual',
     external_id: drink.id || null,
   }
+}
+
+
+function toDrinkNoteCard(note) {
+  return {
+    id: note.id,
+    createdAt: note.created_at,
+    drink: {
+      id: note.external_id,
+      name: note.drink_name,
+      type: toDrinkTypeLabel(note.drink_type),
+    },
+    drinkName: note.drink_name,
+    drinkType: toDrinkTypeLabel(note.drink_type),
+    note: note.note,
+    updatedAt: note.updated_at,
+  }
+}
+
+function toDrinkTypeLabel(drinkType) {
+  if (drinkType === 'cocktail') {
+    return 'Cocktail'
+  }
+
+  if (drinkType === 'wine') {
+    return 'Wine'
+  }
+
+  return 'Whiskey'
 }

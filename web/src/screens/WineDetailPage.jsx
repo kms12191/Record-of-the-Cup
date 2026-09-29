@@ -80,9 +80,9 @@ export function WineDetailPage({ onBack, session, wineId }) {
           </div>
 
           <div className="detail-meta-grid">
-            <span><strong>지역</strong>{[detail.country, detail.region].filter(Boolean).join(' · ') || '지역 정보 없음'}</span>
-            <span><strong>바디감</strong>{formatIntensity(detail.body)}</span>
-            <span><strong>산미</strong>{formatIntensity(detail.acidity)}</span>
+            <div className="detail-meta-card"><strong>지역</strong>{[detail.country, detail.region].filter(Boolean).join(' · ') || '지역 정보 없음'}</div>
+            <div className="detail-meta-card"><strong>바디감</strong>{renderIntensity(detail.body)}</div>
+            <div className="detail-meta-card"><strong>산미</strong>{renderIntensity(detail.acidity)}</div>
           </div>
 
           <section className="detail-section">
@@ -121,7 +121,7 @@ export function WineDetailPage({ onBack, session, wineId }) {
   )
 }
 
-function formatIntensity(profile) {
+function renderIntensity(profile) {
   if (!profile) {
     return '정보 없음'
   }
@@ -130,5 +130,21 @@ function formatIntensity(profile) {
     return profile.label || '정보 없음'
   }
 
-  return `${profile.label} · ${profile.score}/5`
+  const score = normalizeIntensityScore(profile.score)
+
+  return (
+    <span className="wine-rating-stars" aria-label={`${profile.label}, 5점 만점에 ${score}점`}>
+      <span className="wine-stars-meter" aria-hidden="true">
+        <span className="wine-stars-base">★★★★★</span>
+        <span className="wine-stars-fill" style={{ width: `${(score / 5) * 100}%` }}>★★★★★</span>
+      </span>
+      <em>{profile.label} · {score}/5</em>
+    </span>
+  )
+}
+
+function normalizeIntensityScore(score) {
+  const numericScore = Number(score) || 0
+  const halfStepScore = Math.round(numericScore * 2) / 2
+  return Math.max(0, Math.min(5, halfStepScore))
 }

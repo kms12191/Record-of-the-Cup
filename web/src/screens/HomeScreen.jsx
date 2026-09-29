@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
 import { SectionHeader } from '../components/common'
 import { HeartIcon, NoteIcon } from '../components/icons'
-import { categories, fallbackCocktailDrink, savedNotes } from '../constants/appData'
+import { categories, fallbackCocktailDrink } from '../constants/appData'
 import { fetchFeaturedCocktails } from '../services/cocktailService'
+import { fetchRecentDrinkNotes } from '../services/noteService'
 import { fetchFeaturedWines } from '../services/wineService'
 
-export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, savedDrinkIds }) {
+export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onOpenNotes, onSaveDrink, savedDrinkIds, session }) {
   const [featuredCocktails, setFeaturedCocktails] = useState([fallbackCocktailDrink])
   const [featuredWines, setFeaturedWines] = useState([])
+  const [recentNote, setRecentNote] = useState(null)
+  const [recentNoteStatus, setRecentNoteStatus] = useState('loading')
 
   useEffect(() => {
     let isMounted = true
@@ -41,7 +44,79 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, s
     }
   }, [])
 
+  useEffect(() => {
+    if (!session?.user) {
+      return undefined
+    }
+
+    let isMounted = true
+
+    fetchRecentDrinkNotes(session.user.id, 1)
+      .then((notes) => {
+        if (!isMounted) {
+          return
+        }
+
+        setRecentNote(notes[0] || null)
+        setRecentNoteStatus(notes.length > 0 ? 'ready' : 'empty')
+      })
+      .catch(() => {
+        if (isMounted) {
+          setRecentNote(null)
+          setRecentNoteStatus('error')
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [session])
+
   const featuredDrinks = [...featuredCocktails, ...featuredWines]
+  const resolvedRecentNoteStatus = session?.user ? recentNoteStatus : 'signedOut'
+
+  function handleOpenFeaturedDrink(drink) {
+    onOpenDrinkDetail(drink)
+  }
+
+  function handleFeaturedCardKeyDown(event, drink) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+
+    event.preventDefault()
+    handleOpenFeaturedDrink(drink)
+  }
+
+  function handleOpenRecentNote() {
+    if (!recentNote?.drink?.id) {
+      onOpenNotes()
+      return
+    }
+
+    onOpenDrinkDetail(recentNote.drink)
+  }
+
+  function renderRecentNoteContent() {
+    if (resolvedRecentNoteStatus === 'signedOut') {
+      return '로그인 후 상세 페이지에서 남긴 노트를 확인할 수 있습니다.'
+    }
+
+    if (resolvedRecentNoteStatus === 'loading') {
+      return '최근 노트를 불러오는 중입니다.'
+    }
+
+    if (resolvedRecentNoteStatus === 'error') {
+      return '최근 노트를 불러오지 못했습니다.'
+    }
+
+    if (resolvedRecentNoteStatus === 'empty') {
+      return '상세 페이지에서 내 노트를 남기면 여기에 표시됩니다.'
+    }
+
+    return recentNote.note
+  }
+
   return (
     <>
       <section className="top-panel">
@@ -55,6 +130,21 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, s
           <span className="tumbler" />
           <span className="lime" />
         </div>
+
+
+        <section className="note-panel">
+          <SectionHeader title="최근 노트" action="전체보기" onAction={onOpenNotes} />
+          <article
+            className={recentNote ? 'note-row interactive' : 'note-row'}
+            onClick={recentNote ? handleOpenRecentNote : undefined}
+          >
+            <NoteIcon />
+            <div>
+              {recentNote ? <strong>{recentNote.drinkName}</strong> : null}
+              <p>{renderRecentNoteContent()}</p>
+            </div>
+          </article>
+        </section>
       </section>
 
       <section className="content-panel">
@@ -64,7 +154,10 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, s
             <article
               className={`drink-card ${drink.type.toLowerCase()}`}
               key={drink.id || drink.name}
-              onClick={() => onOpenDrinkDetail(drink)}
+              onClick={() => handleOpenFeaturedDrink(drink)}
+              onKeyDown={(event) => handleFeaturedCardKeyDown(event, drink)}
+              role="button"
+              tabIndex={0}
             >
               <div className="drink-art" aria-hidden="true">
                 {drink.imageUrl ? <img alt="" src={drink.imageUrl} /> : null}
@@ -111,17 +204,6 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onSaveDrink, s
             )
           })}
         </div>
-
-
-        <section className="note-panel">
-          <SectionHeader title="최근 기록" action="추가" />
-          {savedNotes.map((note) => (
-            <article className="note-row" key={note}>
-              <NoteIcon />
-              <p>{note}</p>
-            </article>
-          ))}
-        </section>
       </section>
     </>
   )

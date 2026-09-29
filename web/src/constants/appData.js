@@ -9,12 +9,6 @@ export const categories = [
   { title: 'Wine', count: 'Bottle 86', accent: 'wine' },
   { title: 'Whiskey', count: 'Coming soon', accent: 'gold' },
 ]
-
-export const savedNotes = [
-  '라임은 조금 더 줄이고 바질은 2장 추가',
-  '피노 누아는 버섯 리조또와 다시 테스트',
-]
-
 export const appTabs = ['home', 'search', 'saved', 'notes', 'settings']
 export const themeModes = ['light', 'dark', 'system']
 export const activeTabStorageKey = 'record-of-the-cup:active-tab'
