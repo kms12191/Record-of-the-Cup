@@ -69,6 +69,30 @@ create table if not exists public.user_preferences (
 
 
 
+-- Public cocktail catalog imported from TheCocktailDB.
+-- App clients can read this table, while import scripts use the service_role key to upsert rows.
+create table if not exists public.cocktails (
+  external_id text primary key,
+  name text not null,
+  name_ko text,
+  category text,
+  category_ko text,
+  alcoholic text,
+  alcoholic_ko text,
+  glass text,
+  glass_ko text,
+  instructions text,
+  instructions_ko text,
+  image_url text,
+  ingredients jsonb not null default '[]'::jsonb,
+  ingredients_ko jsonb not null default '[]'::jsonb,
+  source text not null default 'cocktaildb',
+  raw_data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+
 -- Public wine catalog imported from external wine APIs.
 -- App clients can read this table, while import scripts use the service_role key to upsert rows.
 create table if not exists public.wines (
@@ -136,6 +160,16 @@ alter table public.wines add column if not exists wineapi_raw_data jsonb;
 alter table public.wines add column if not exists wineapi_updated_at timestamptz;
 
 
+
+create index if not exists cocktails_name_idx
+  on public.cocktails (name);
+
+create index if not exists cocktails_category_ko_idx
+  on public.cocktails (category_ko);
+
+create index if not exists cocktails_alcoholic_ko_idx
+  on public.cocktails (alcoholic_ko);
+
 create index if not exists wines_wineapi_id_idx
   on public.wines (wineapi_id);
 
@@ -173,6 +207,8 @@ grant select, insert, update, delete on public.favorites to authenticated;
 grant select, insert, update, delete on public.drink_records to authenticated;
 grant select, insert, update, delete on public.drink_notes to authenticated;
 grant select, insert, update, delete on public.user_preferences to authenticated;
+grant select on public.cocktails to anon, authenticated;
+grant select, insert, update on public.cocktails to service_role;
 grant select on public.wines to anon, authenticated;
 grant select, insert, update on public.wines to service_role;
 
@@ -181,9 +217,17 @@ alter table public.favorites enable row level security;
 alter table public.drink_records enable row level security;
 alter table public.drink_notes enable row level security;
 alter table public.user_preferences enable row level security;
+alter table public.cocktails enable row level security;
 alter table public.wines enable row level security;
 
 
+
+
+drop policy if exists "Cocktail catalog is readable by everyone" on public.cocktails;
+create policy "Cocktail catalog is readable by everyone"
+  on public.cocktails
+  for select
+  using (true);
 
 drop policy if exists "Wine catalog is readable by everyone" on public.wines;
 create policy "Wine catalog is readable by everyone"
@@ -347,6 +391,13 @@ create trigger drink_notes_set_updated_at
 drop trigger if exists user_preferences_set_updated_at on public.user_preferences;
 create trigger user_preferences_set_updated_at
   before update on public.user_preferences
+  for each row
+  execute function public.update_updated_at();
+
+
+drop trigger if exists cocktails_set_updated_at on public.cocktails;
+create trigger cocktails_set_updated_at
+  before update on public.cocktails
   for each row
   execute function public.update_updated_at();
 
