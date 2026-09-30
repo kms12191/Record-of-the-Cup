@@ -195,22 +195,44 @@ For the portfolio version, the app is planned as a personal-use service that wil
 Recommended operating flow:
 
 1. External cocktail and wine APIs provide original drink data.
-2. Internal adapter modules fetch and normalize API responses.
-3. Supabase stores app-owned data that the user has saved, recorded, or edited.
-4. React screens primarily read normalized data and user-owned records from Supabase.
+2. Import and enrichment scripts fetch API data outside the frontend.
+3. Supabase stores the app-owned public drink catalog and private user data.
+4. React screens primarily read normalized catalog data, favorites, and notes from Supabase.
 5. Search, recommendation, favorites, and notes use the app's normalized data shape instead of raw API payloads.
-
-Do not bulk-copy every external API item into Supabase at the start. Store external drink data when it becomes meaningful to the app, such as when the user favorites a drink, creates a tasting record, writes a note, or when a curated recommendation needs stable display data.
 
 The app should treat sources as follows:
 
 - External APIs are source data providers.
-- Supabase is the app's working data store.
+- Supabase is the app's working data store for stable cocktail and wine catalog data.
 - React is the client experience layer and should avoid depending on raw third-party API response shapes.
 
 This keeps the deployed portfolio app stable even if an external API is slow, temporarily unavailable, rate-limited, or changes response fields. It also makes the app feel like it manages its own data rather than only displaying another service's API response.
 
-When an external API requires a private API key, do not call it directly from the Vite frontend. Route that request through a server-side layer such as a Supabase Edge Function before saving or returning normalized data.
+When an external API requires a private API key, do not call it directly from the Vite frontend. Use local import scripts for development data operations or route production requests through a server-side layer such as a Supabase Edge Function before saving or returning normalized data.
+
+### WineAPI Enrichment Operations
+
+Wine detail enrichment is done gradually because the current WineAPI free tier allows 100 requests per day. The enrichment process should be treated as a maintenance task, not a normal frontend action.
+
+Current operating rules:
+
+- Use `npm run enrich:wines -- --limit 50` or `npm run enrich:wines -- --limit 60` as the normal daily range.
+- Do not assume `--limit 60` means exactly 60 API requests; one wine can require more than one WineAPI request.
+- If WineAPI returns `429` or `RATE_LIMITED`, stop running enrichment for that day.
+- Previously updated rows are expected to remain saved even if the script stops later because of a rate limit.
+- `matched` wines are considered app-ready for wine detail and recommendation display.
+- `pending` wines still need enrichment.
+- `skipped` wines should be reviewed later and manually corrected if they matter for the app experience.
+- `error` rows should be inspected before retrying so the app does not repeatedly request bad data.
+
+Recommended progress check fields:
+
+- `matched`: enriched and usable.
+- `pending`: not yet processed or still waiting.
+- `skipped`: no confident WineAPI match.
+- `error`: request or update failed.
+
+Manual data cleanup should focus first on wines that are already `matched`, visible in the app, highly rated, or useful for portfolio demos.
 
 ## Recommendation Principles
 

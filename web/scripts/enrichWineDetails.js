@@ -5,7 +5,7 @@ import process from 'node:process'
 
 const wineApiBaseUrl = 'https://api.wineapi.io'
 const defaultLimit = 5
-const maxLimit = 40
+const maxLimit = 60
 const isDryRun = process.argv.includes('--dry-run')
 const limit = getNumberArg('--limit', defaultLimit, maxLimit)
 
@@ -41,10 +41,31 @@ console.log(`Preparing to enrich ${wines.length} wines with WineAPI.`)
 
 let updatedCount = 0
 let skippedCount = 0
+let errorCount = 0
+let rateLimitReached = false
 
 for (const wine of wines) {
   const searchQuery = buildSearchQuery(wine)
-  const searchData = await requestWineApi(`/wines/search?q=${encodeURIComponent(searchQuery)}&limit=5&offset=0`)
+  let searchData
+
+  try {
+    searchData = await requestWineApi(`/wines/search?q=${encodeURIComponent(searchQuery)}&limit=5&offset=0`)
+  } catch (error) {
+    if (isRateLimitError(error)) {
+      rateLimitReached = true
+      console.log(`Rate limit reached while searching ${wine.name}. Stop enrichment for today.`)
+      break
+    }
+
+    errorCount += 1
+    await markWineAttempt(wine, {
+      status: 'error',
+      error: error.message,
+    })
+    console.log(`Error: ${wine.name} - ${error.message}`)
+    continue
+  }
+
   const match = pickBestMatch(wine, searchData.results || [])
 
   if (!match) {
@@ -62,7 +83,13 @@ for (const wine of wines) {
   try {
     detail = await requestWineApi(`/wines/${match.id}`)
   } catch (error) {
-    skippedCount += 1
+    if (isRateLimitError(error)) {
+      rateLimitReached = true
+      console.log(`Rate limit reached while fetching details for ${wine.name}. Stop enrichment for today.`)
+      break
+    }
+
+    errorCount += 1
     await markWineAttempt(wine, {
       status: 'error',
       error: error.message,
@@ -91,10 +118,16 @@ for (const wine of wines) {
   console.log(`Updated: ${wine.name} -> ${detail.name || match.name}`)
 }
 
+if (rateLimitReached) {
+  console.log('WineAPI daily rate limit reached. Stop additional enrichment runs for today.')
+}
+
 if (isDryRun) {
-  console.log(`Dry run complete. ${wines.length - skippedCount} wines matched, ${skippedCount} skipped.`)
+  console.log(`Dry run complete. ${wines.length - skippedCount - errorCount} wines matched, ${skippedCount} skipped, ${errorCount} errors.`)
+} else if (rateLimitReached) {
+  console.log(`WineAPI enrichment stopped. ${updatedCount} updated, ${skippedCount} skipped, ${errorCount} errors before rate limit.`)
 } else {
-  console.log(`WineAPI enrichment complete. ${updatedCount} updated, ${skippedCount} skipped.`)
+  console.log(`WineAPI enrichment complete. ${updatedCount} updated, ${skippedCount} skipped, ${errorCount} errors.`)
 }
 
 async function fetchPendingWines(rowLimit) {
@@ -143,10 +176,17 @@ async function requestWineApi(path) {
 
   if (!response.ok) {
     const message = await response.text()
-    throw new Error(`WineAPI request failed with ${response.status}: ${message}`)
+    const error = new Error(`WineAPI request failed with ${response.status}: ${message}`)
+    error.status = response.status
+    error.responseBody = message
+    throw error
   }
 
   return response.json()
+}
+
+function isRateLimitError(error) {
+  return error?.status === 429 || String(error?.message || '').includes('RATE_LIMITED')
 }
 
 function buildSearchQuery(wine) {
