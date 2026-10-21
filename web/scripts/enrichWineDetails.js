@@ -98,7 +98,7 @@ for (const wine of wines) {
     continue
   }
 
-  const updates = normalizeWineApiDetail(detail, match)
+  const updates = normalizeWineApiDetail(detail, match, wine)
 
   if (isDryRun) {
     console.log(`Dry run: ${wine.name} -> ${detail.name || match.name}`)
@@ -133,7 +133,7 @@ if (isDryRun) {
 async function fetchPendingWines(rowLimit) {
   const { data, error } = await supabase
     .from('wines')
-    .select('id, name, winery, country, region, rating_average, wineapi_status')
+    .select('id, name, winery, country, region, rating_average, wineapi_status, wineapi_attempt_count')
     .eq('wineapi_status', 'pending')
     .order('rating_average', { ascending: false, nullsFirst: false })
     .limit(rowLimit)
@@ -154,7 +154,7 @@ async function markWineAttempt(wine, { status, error }) {
     .from('wines')
     .update({
       wineapi_status: status,
-      wineapi_attempt_count: 1,
+      wineapi_attempt_count: getNextAttemptCount(wine),
       wineapi_attempted_at: new Date().toISOString(),
       wineapi_error: error || null,
       updated_at: new Date().toISOString(),
@@ -164,6 +164,10 @@ async function markWineAttempt(wine, { status, error }) {
   if (updateError) {
     throw new Error(`Failed to mark ${wine.name} as ${status}: ${updateError.message}`)
   }
+}
+
+function getNextAttemptCount(wine) {
+  return Number(wine.wineapi_attempt_count || 0) + 1
 }
 
 async function requestWineApi(path) {
@@ -235,11 +239,11 @@ function scoreWineMatch(wine, result) {
   return score
 }
 
-function normalizeWineApiDetail(detail, match) {
+function normalizeWineApiDetail(detail, match, wine) {
   return {
     wineapi_id: detail.id || match.id,
     wineapi_status: 'matched',
-    wineapi_attempt_count: 1,
+    wineapi_attempt_count: getNextAttemptCount(wine),
     wineapi_attempted_at: new Date().toISOString(),
     wineapi_error: null,
     wineapi_confidence: toNumberOrNull(match.confidence),

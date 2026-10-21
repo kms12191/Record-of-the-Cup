@@ -1,4 +1,4 @@
-import { cocktailAlcoholFilters, cocktailCategoryFilters, cocktailColorFilters, wineAcidityFilters, wineBodyFilters, wineRatingFilters, wineTypeFilters } from '../constants/appData'
+import { cocktailAlcoholFilters, cocktailCategoryFilters, wineAcidityFilters, wineBodyFilters, wineRatingFilters, wineTypeFilters } from '../constants/appData'
 
 export function FilterPanel({ activeFilterCount, drinkType, filters, onFilterChange, onReset }) {
   return (
@@ -28,14 +28,6 @@ export function FilterPanel({ activeFilterCount, drinkType, filters, onFilterCha
             onChange={onFilterChange}
             options={cocktailCategoryFilters}
             value={filters.category}
-          />
-          <FilterChipGroup
-            label="색상 기준"
-            name="color"
-            onChange={onFilterChange}
-            options={cocktailColorFilters}
-            value={filters.color}
-            note="색상 DB 연결은 다음 단계에서 적용 예정"
           />
         </div>
       ) : (

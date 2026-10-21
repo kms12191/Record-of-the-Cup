@@ -78,9 +78,9 @@ export function CocktailDetailPage({ cocktailId, onBack, session }) {
           </div>
 
           <div className="detail-meta-grid">
-            <span><strong>분류</strong>{detail.category}</span>
-            <span><strong>글라스</strong>{detail.glass}</span>
-            <span><strong>타입</strong>{detail.alcoholic}</span>
+            <div className="detail-meta-card"><strong>분류</strong>{detail.category}</div>
+            <div className="detail-meta-card"><strong>글라스</strong>{detail.glass}</div>
+            <div className="detail-meta-card"><strong>타입</strong>{detail.alcoholic}</div>
           </div>
 
           <section className="detail-section">
@@ -97,7 +97,14 @@ export function CocktailDetailPage({ cocktailId, onBack, session }) {
 
           <section className="detail-section">
             <h3>제조법</h3>
-            <p>{detail.instructions}</p>
+            <ol className="instruction-list">
+              {getInstructionSteps(detail.instructions).map((step, index) => (
+                <li className="instruction-step" key={`${step}-${index}`}>
+                  <span>{index + 1}</span>
+                  <p>{step}</p>
+                </li>
+              ))}
+            </ol>
           </section>
 
           <DrinkNotePanel drink={drink} session={session} />
@@ -105,4 +112,15 @@ export function CocktailDetailPage({ cocktailId, onBack, session }) {
       ) : null}
     </section>
   )
+}
+
+
+function getInstructionSteps(instructions) {
+  const text = instructions || '제조법 정보가 아직 준비되지 않았습니다.'
+
+  return text
+    .replace(/\.\s+/g, '.|')
+    .split('|')
+    .map((step) => step.trim())
+    .filter(Boolean)
 }

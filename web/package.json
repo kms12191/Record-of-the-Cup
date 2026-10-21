@@ -14,7 +14,9 @@
     "import:wines:dry": "node scripts/importWines.js --dry-run",
     "enrich:wines": "node scripts/enrichWineDetails.js",
     "enrich:wines:dry": "node scripts/enrichWineDetails.js --dry-run --limit 3",
-    "wines:status": "node scripts/wineStatus.js"
+    "wines:status": "node scripts/wineStatus.js",
+    "wines:issues": "node scripts/wineIssues.js",
+    "cocktails:status": "node scripts/cocktailStatus.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

@@ -1,6 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
 
-
 export async function fetchRecentDrinkNotes(userId, limit = 1) {
   const { data, error } = await supabase
     .from('drink_notes')
@@ -13,7 +12,7 @@ export async function fetchRecentDrinkNotes(userId, limit = 1) {
     throw error
   }
 
-  return (data || []).map(toDrinkNoteCard)
+  return hydrateDrinkNotes(data || [])
 }
 
 export async function fetchDrinkNotes(userId) {
@@ -27,7 +26,7 @@ export async function fetchDrinkNotes(userId) {
     throw error
   }
 
-  return (data || []).map(toDrinkNoteCard)
+  return hydrateDrinkNotes(data || [])
 }
 
 export async function fetchDrinkNote(userId, drink) {
@@ -110,6 +109,73 @@ export async function deleteDrinkNote(userId, noteId) {
   }
 }
 
+async function hydrateDrinkNotes(notes) {
+  const catalogByKey = await fetchCatalogSummaries(notes)
+  return notes.map((note) => toDrinkNoteCard(note, catalogByKey))
+}
+
+async function fetchCatalogSummaries(items) {
+  const cocktailIds = getExternalIdsByType(items, 'cocktail')
+  const wineIds = getExternalIdsByType(items, 'wine')
+  const [cocktails, wines] = await Promise.all([
+    fetchCocktailSummaries(cocktailIds),
+    fetchWineSummaries(wineIds),
+  ])
+
+  return [...cocktails, ...wines].reduce((catalogByKey, drink) => {
+    catalogByKey[getCatalogKey(drink.type, drink.id)] = drink
+    return catalogByKey
+  }, {})
+}
+
+async function fetchCocktailSummaries(ids) {
+  if (ids.length === 0) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('cocktails')
+    .select('external_id, name, name_ko')
+    .in('external_id', ids)
+
+  if (error) {
+    throw error
+  }
+
+  return (data || []).map((cocktail) => ({
+    id: cocktail.external_id,
+    name: cocktail.name_ko || cocktail.name,
+    type: 'cocktail',
+  }))
+}
+
+async function fetchWineSummaries(ids) {
+  if (ids.length === 0) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('wines')
+    .select('id, name, name_ko')
+    .in('id', ids)
+
+  if (error) {
+    throw error
+  }
+
+  return (data || []).map((wine) => ({
+    id: wine.id,
+    name: wine.name_ko || wine.name,
+    type: 'wine',
+  }))
+}
+
+function getExternalIdsByType(items, drinkType) {
+  return [...new Set(items
+    .filter((item) => item.drink_type === drinkType && item.external_id)
+    .map((item) => item.external_id))]
+}
+
 function getDrinkNoteIdentity(userId, drink) {
   return {
     user_id: userId,
@@ -119,21 +185,27 @@ function getDrinkNoteIdentity(userId, drink) {
   }
 }
 
+function toDrinkNoteCard(note, catalogByKey) {
+  const catalogDrink = catalogByKey[getCatalogKey(note.drink_type, note.external_id)]
+  const drinkName = catalogDrink?.name || note.drink_name
 
-function toDrinkNoteCard(note) {
   return {
     id: note.id,
     createdAt: note.created_at,
     drink: {
       id: note.external_id,
-      name: note.drink_name,
+      name: drinkName,
       type: toDrinkTypeLabel(note.drink_type),
     },
-    drinkName: note.drink_name,
+    drinkName,
     drinkType: toDrinkTypeLabel(note.drink_type),
     note: note.note,
     updatedAt: note.updated_at,
   }
+}
+
+function getCatalogKey(drinkType, externalId) {
+  return `${drinkType}:${externalId}`
 }
 
 function toDrinkTypeLabel(drinkType) {

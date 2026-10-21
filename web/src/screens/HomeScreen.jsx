@@ -6,7 +6,7 @@ import { fetchFeaturedCocktails } from '../services/cocktailService'
 import { fetchRecentDrinkNotes } from '../services/noteService'
 import { fetchFeaturedWines } from '../services/wineService'
 
-export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onOpenNotes, onSaveDrink, savedDrinkIds, session }) {
+export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onOpenNotes, onSaveDrink, recentViewedDrinks = [], savedDrinkIds, session }) {
   const [featuredCocktails, setFeaturedCocktails] = useState([fallbackCocktailDrink])
   const [featuredWines, setFeaturedWines] = useState([])
   const [recentNote, setRecentNote] = useState(null)
@@ -97,6 +97,10 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onOpenNotes, o
     onOpenDrinkDetail(recentNote.drink)
   }
 
+  function handleOpenRecentView(drink) {
+    onOpenDrinkDetail(drink)
+  }
+
   function renderRecentNoteContent() {
     if (resolvedRecentNoteStatus === 'signedOut') {
       return '로그인 후 상세 페이지에서 남긴 노트를 확인할 수 있습니다.'
@@ -183,6 +187,30 @@ export function HomeScreen({ onCategorySelect, onOpenDrinkDetail, onOpenNotes, o
             </article>
           ))}
         </div>
+
+        <section className="recent-view-panel">
+          <SectionHeader title="최근 본 항목" action="탐색" onAction={() => onCategorySelect('cocktail')} />
+          {recentViewedDrinks.length > 0 ? (
+            <div className="recent-view-list">
+              {recentViewedDrinks.slice(0, 3).map((drink) => (
+                <button className="recent-view-row" key={`${drink.type}-${drink.id}`} onClick={() => handleOpenRecentView(drink)} type="button">
+                  <span>{drink.imageUrl ? <img alt="" src={drink.imageUrl} /> : drink.type.slice(0, 1)}</span>
+                  <div>
+                    <strong>{drink.name}</strong>
+                    <p>{drink.meta}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <article className="note-row">
+              <NoteIcon />
+              <div>
+                <p>상세 페이지를 열면 최근 본 항목이 여기에 표시됩니다.</p>
+              </div>
+            </article>
+          )}
+        </section>
 
         <SectionHeader title="탐색 카테고리" action="필터" />
         <div className="category-strip">

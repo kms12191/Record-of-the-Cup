@@ -17,7 +17,7 @@ export function SearchScreen({ initialDrinkType = 'cocktail', onOpenDrinkDetail,
   const [filters, setFilters] = useState(getInitialFilters())
   const totalPages = Math.ceil(totalCount / cocktailPageSize)
   const activeFilterCount = drinkType === 'cocktail'
-    ? [filters.alcoholic, filters.category, filters.color].filter(Boolean).length
+    ? [filters.alcoholic, filters.category].filter(Boolean).length
     : [filters.wineType, filters.rating, filters.body, filters.acidity].filter(Boolean).length
 
   useEffect(() => {
@@ -174,5 +174,5 @@ export function SearchScreen({ initialDrinkType = 'cocktail', onOpenDrinkDetail,
 }
 
 function getInitialFilters() {
-  return { alcoholic: '', category: '', color: '', wineType: '', rating: '', body: '', acidity: '' }
+  return { alcoholic: '', category: '', wineType: '', rating: '', body: '', acidity: '' }
 }

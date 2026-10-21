@@ -42,8 +42,6 @@ export async function saveFavoriteDrink(userId, drink) {
   return data
 }
 
-
-
 export async function deleteFavoriteDrink(userId, drink) {
   const { error } = await supabase
     .from('favorites')
@@ -82,19 +80,93 @@ export async function fetchFavoriteDrinks() {
     throw error
   }
 
-  return data.map(toFavoriteCard)
+  const favorites = data || []
+  const catalogByKey = await fetchCatalogSummaries(favorites)
+
+  return favorites.map((favorite) => toFavoriteCard(favorite, catalogByKey))
 }
 
-function toFavoriteCard(favorite) {
+async function fetchCatalogSummaries(items) {
+  const cocktailIds = getExternalIdsByType(items, 'cocktail')
+  const wineIds = getExternalIdsByType(items, 'wine')
+  const [cocktails, wines] = await Promise.all([
+    fetchCocktailSummaries(cocktailIds),
+    fetchWineSummaries(wineIds),
+  ])
+
+  return [...cocktails, ...wines].reduce((catalogByKey, drink) => {
+    catalogByKey[getCatalogKey(drink.type, drink.id)] = drink
+    return catalogByKey
+  }, {})
+}
+
+async function fetchCocktailSummaries(ids) {
+  if (ids.length === 0) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('cocktails')
+    .select('external_id, name, name_ko, image_url')
+    .in('external_id', ids)
+
+  if (error) {
+    throw error
+  }
+
+  return (data || []).map((cocktail) => ({
+    id: cocktail.external_id,
+    imageUrl: cocktail.image_url,
+    name: cocktail.name_ko || cocktail.name,
+    type: 'cocktail',
+  }))
+}
+
+async function fetchWineSummaries(ids) {
+  if (ids.length === 0) {
+    return []
+  }
+
+  const { data, error } = await supabase
+    .from('wines')
+    .select('id, name, name_ko, image_url')
+    .in('id', ids)
+
+  if (error) {
+    throw error
+  }
+
+  return (data || []).map((wine) => ({
+    id: wine.id,
+    imageUrl: wine.image_url,
+    name: wine.name_ko || wine.name,
+    type: 'wine',
+  }))
+}
+
+function getExternalIdsByType(items, drinkType) {
+  return [...new Set(items
+    .filter((item) => item.drink_type === drinkType && item.external_id)
+    .map((item) => item.external_id))]
+}
+
+function toFavoriteCard(favorite, catalogByKey) {
+  const catalogDrink = catalogByKey[getCatalogKey(favorite.drink_type, favorite.external_id)]
+  const drinkName = catalogDrink?.name || favorite.drink_name
+
   return {
     id: favorite.external_id || favorite.id,
     favoriteId: favorite.id,
-    imageUrl: favorite.image_url,
+    imageUrl: catalogDrink?.imageUrl || favorite.image_url,
     meta: `${toDrinkTypeLabel(favorite.drink_type)} · 저장됨`,
-    name: favorite.drink_name,
+    name: drinkName,
     note: '관심 목록에 저장한 한 잔입니다.',
     type: toDrinkTypeLabel(favorite.drink_type),
   }
+}
+
+function getCatalogKey(drinkType, externalId) {
+  return `${drinkType}:${externalId}`
 }
 
 function toDrinkTypeLabel(drinkType) {

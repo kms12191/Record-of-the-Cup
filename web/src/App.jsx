@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import { BottomTabs } from './components/common'
-import { appTabs, activeTabStorageKey, detailRoutePattern, themeModeStorageKey, themeModes, wineDetailRoutePattern } from './constants/appData'
+import { appTabs, activeTabStorageKey, detailRoutePattern, recentViewsStorageKey, themeModeStorageKey, themeModes, wineDetailRoutePattern } from './constants/appData'
 import { CocktailDetailPage } from './screens/CocktailDetailPage'
 import { HomeScreen } from './screens/HomeScreen'
 import { NotesScreen } from './screens/NotesScreen'
@@ -26,6 +26,7 @@ function App() {
   const [searchDrinkType, setSearchDrinkType] = useState('cocktail')
   const [savedDrinkIds, setSavedDrinkIds] = useState([])
   const [savedRefreshKey, setSavedRefreshKey] = useState(0)
+  const [recentViewedDrinks, setRecentViewedDrinks] = useState(() => getStoredRecentViewedDrinks())
 
 
   useEffect(() => {
@@ -158,6 +159,20 @@ function App() {
     setActiveTab('search')
   }
 
+  function handleOpenDrinkDetail(drink) {
+    if (!drink?.id) {
+      return
+    }
+
+    setRecentViewedDrinks((currentDrinks) => {
+      const nextDrinks = getNextRecentViewedDrinks(currentDrinks, drink)
+      storeRecentViewedDrinks(nextDrinks)
+      return nextDrinks
+    })
+
+    navigateToDrinkDetailRoute(drink)
+  }
+
   async function handleSaveDrink(drink) {
     if (!session?.user) {
       setSaveNotice('로그인 후 관심 목록에 저장할 수 있습니다.')
@@ -195,10 +210,10 @@ function App() {
         <WineDetailPage key={route.wineId} wineId={route.wineId} onBack={goBackFromDetail} session={session} />
       ) : (
         <>
-          {activeTab === 'home' ? <HomeScreen onCategorySelect={openSearchTab} onOpenDrinkDetail={navigateToDrinkDetail} onOpenNotes={() => setActiveTab('notes')} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} session={session} /> : null}
-          {activeTab === 'search' ? <SearchScreen initialDrinkType={searchDrinkType} key={searchDrinkType} onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} /> : null}
-          {activeTab === 'saved' ? <SavedScreen onOpenDrinkDetail={navigateToDrinkDetail} onSaveDrink={handleSaveDrink} refreshKey={savedRefreshKey} session={session} /> : null}
-          {activeTab === 'notes' ? <NotesScreen onOpenDrinkDetail={navigateToDrinkDetail} session={session} /> : null}
+          {activeTab === 'home' ? <HomeScreen onCategorySelect={openSearchTab} onOpenDrinkDetail={handleOpenDrinkDetail} onOpenNotes={() => setActiveTab('notes')} onSaveDrink={handleSaveDrink} recentViewedDrinks={recentViewedDrinks} savedDrinkIds={savedDrinkIds} session={session} /> : null}
+          {activeTab === 'search' ? <SearchScreen initialDrinkType={searchDrinkType} key={searchDrinkType} onOpenDrinkDetail={handleOpenDrinkDetail} onSaveDrink={handleSaveDrink} savedDrinkIds={savedDrinkIds} /> : null}
+          {activeTab === 'saved' ? <SavedScreen onOpenDrinkDetail={handleOpenDrinkDetail} onSaveDrink={handleSaveDrink} refreshKey={savedRefreshKey} session={session} /> : null}
+          {activeTab === 'notes' ? <NotesScreen onOpenDrinkDetail={handleOpenDrinkDetail} session={session} /> : null}
           {activeTab === 'settings' ? <SettingsScreen onThemeModeChange={setThemeMode} profile={profile} session={session} themeMode={themeMode} /> : null}
 
           <BottomTabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -247,7 +262,7 @@ function getCurrentRoute() {
   return { name: 'main' }
 }
 
-function navigateToDrinkDetail(drink) {
+function navigateToDrinkDetailRoute(drink) {
   if (!drink?.id) {
     return
   }
@@ -258,6 +273,37 @@ function navigateToDrinkDetail(drink) {
   }
 
   window.location.hash = `/cocktails/${encodeURIComponent(drink.id)}`
+}
+
+
+function getStoredRecentViewedDrinks() {
+  try {
+    const storedDrinks = JSON.parse(window.localStorage.getItem(recentViewsStorageKey) || '[]')
+    return Array.isArray(storedDrinks) ? storedDrinks.slice(0, 5) : []
+  } catch {
+    return []
+  }
+}
+
+function getNextRecentViewedDrinks(currentDrinks, drink) {
+  const normalizedDrink = {
+    id: drink.id,
+    imageUrl: drink.imageUrl || null,
+    meta: drink.meta || `${drink.type} · 최근 본 항목`,
+    name: drink.name,
+    note: drink.note || '최근 상세 페이지에서 확인한 한 잔입니다.',
+    type: drink.type,
+    viewedAt: new Date().toISOString(),
+  }
+
+  return [
+    normalizedDrink,
+    ...currentDrinks.filter((currentDrink) => !(currentDrink.id === drink.id && currentDrink.type === drink.type)),
+  ].slice(0, 5)
+}
+
+function storeRecentViewedDrinks(drinks) {
+  window.localStorage.setItem(recentViewsStorageKey, JSON.stringify(drinks))
 }
 
 function goBackFromDetail() {

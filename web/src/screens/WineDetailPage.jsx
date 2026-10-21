@@ -33,6 +33,7 @@ export function WineDetailPage({ onBack, session, wineId }) {
   const detail = wine?.detail
   const pairings = Array.isArray(detail?.pairings) ? detail.pairings : []
   const grapes = Array.isArray(detail?.grapes) ? detail.grapes : []
+  const insightRows = detail ? buildWineInsightRows(detail, grapes, pairings) : []
 
   return (
     <section className="cocktail-detail-screen wine-detail-screen">
@@ -85,9 +86,17 @@ export function WineDetailPage({ onBack, session, wineId }) {
             <div className="detail-meta-card"><strong>산미</strong>{renderIntensity(detail.acidity)}</div>
           </div>
 
-          <section className="detail-section">
+          <section className="detail-section wine-insight-section">
             <h3>와인 설명</h3>
             <p>{detail.description || wine.note || '와인 설명이 아직 준비되지 않았습니다.'}</p>
+            <div className="wine-insight-grid">
+              {insightRows.map((row) => (
+                <article className="wine-insight-card" key={row.label}>
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
+                </article>
+              ))}
+            </div>
           </section>
 
           <section className="detail-section">
@@ -147,4 +156,22 @@ function normalizeIntensityScore(score) {
   const numericScore = Number(score) || 0
   const halfStepScore = Math.round(numericScore * 2) / 2
   return Math.max(0, Math.min(5, halfStepScore))
+}
+
+
+function buildWineInsightRows(detail, grapes, pairings) {
+  return [
+    { label: '생산자', value: detail.winery || '정보 준비 중' },
+    { label: '지역', value: [detail.country, detail.region].filter(Boolean).join(' · ') || '정보 준비 중' },
+    { label: '품종', value: formatTranslatedList(grapes, translateWineGrape, 2) || '정보 준비 중' },
+    { label: '페어링', value: formatTranslatedList(pairings, translateWinePairing, 3) || '정보 준비 중' },
+  ]
+}
+
+function formatTranslatedList(items, translate, limit) {
+  return items
+    .slice(0, limit)
+    .map((item) => translate(item))
+    .filter(Boolean)
+    .join(', ')
 }
